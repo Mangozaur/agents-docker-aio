@@ -1,0 +1,10 @@
+#!/bin/sh
+# === Environment variables block ===
+export HTTP_PROXY="${CODEX_PROXY:-}"
+export HTTPS_PROXY="${CODEX_PROXY:-}"
+# =================================
+
+# Launch codex: find the real binary outside /opt/wrapper to avoid recursion
+# ${PATH#/opt/wrapper:} doesn't work when EXTRA_PATH is before /opt/wrapper
+_real=$(PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF '/opt/wrapper' | tr '\n' ':' | sed 's/:$//')" command -v codex)
+exec "$_real" "$@"

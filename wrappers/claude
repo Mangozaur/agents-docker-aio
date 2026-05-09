@@ -1,0 +1,19 @@
+#!/bin/sh
+# === Environment variables block ===
+export HTTP_PROXY="${CLAUDE_PROXY:-}"
+export HTTPS_PROXY="${CLAUDE_PROXY:-}"
+# =================================
+
+# Remove abandoned npm temp directories before launching claude.
+# Claude Code tries to self-update via npm on startup; if a previous
+# update was interrupted (container restart, etc.), it leaves a directory
+# like .claude-code-XXXXXXXX, and the next rename() fails with ENOTEMPTY.
+_npm_prefix="${NPM_CONFIG_PREFIX:-$HOME/.npm-global}"
+find "$_npm_prefix/lib/node_modules" \
+    -maxdepth 2 -type d -name '.*-????????' \
+    -exec rm -rf {} + 2>/dev/null || true
+
+# Launch claude: find the real binary outside /opt/wrapper to avoid recursion
+# ${PATH#/opt/wrapper:} doesn't work when EXTRA_PATH is before /opt/wrapper
+_real=$(PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF '/opt/wrapper' | tr '\n' ':' | sed 's/:$//')" command -v claude)
+exec "$_real" "$@"
