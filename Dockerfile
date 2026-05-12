@@ -10,6 +10,7 @@ ENV PATH=/opt/wrapper:/home/dev/.npm-global/bin:/usr/local/cargo/bin:$PATH \
     OPENCODE_CONFIG=/opt/defaults/opencode/opencode.json
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ripgrep \
     bash \
     git \
     curl \
