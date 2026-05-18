@@ -74,6 +74,54 @@ _find_free_port() {
   done
 }
 
+_sanitize_name() {
+  local s="$1"
+  s="${s//щ/shch}"; s="${s//Щ/Shch}"
+  s="${s//ё/yo}";   s="${s//Ё/Yo}"
+  s="${s//ж/zh}";   s="${s//Ж/Zh}"
+  s="${s//ц/ts}";   s="${s//Ц/Ts}"
+  s="${s//ч/ch}";   s="${s//Ч/Ch}"
+  s="${s//ш/sh}";   s="${s//Ш/Sh}"
+  s="${s//ъ/}";     s="${s//Ъ/}"
+  s="${s//ы/y}";    s="${s//Ы/Y}"
+  s="${s//ь/}";     s="${s//Ь/}"
+  s="${s//э/e}";    s="${s//Э/E}"
+  s="${s//ю/yu}";   s="${s//Ю/Yu}"
+  s="${s//я/ya}";   s="${s//Я/Ya}"
+  s="${s//є/ye}";   s="${s//Є/Ye}"
+  s="${s//ї/yi}";   s="${s//Ї/Yi}"
+  s="${s//і/i}";    s="${s//І/I}"
+  s="${s//ґ/g}";    s="${s//Ґ/G}"
+  s="${s//а/a}"; s="${s//А/A}"
+  s="${s//б/b}"; s="${s//Б/B}"
+  s="${s//в/v}"; s="${s//В/V}"
+  s="${s//г/g}"; s="${s//Г/G}"
+  s="${s//д/d}"; s="${s//Д/D}"
+  s="${s//е/e}"; s="${s//Е/E}"
+  s="${s//з/z}"; s="${s//З/Z}"
+  s="${s//и/i}"; s="${s//И/I}"
+  s="${s//й/y}"; s="${s//Й/Y}"
+  s="${s//к/k}"; s="${s//К/K}"
+  s="${s//л/l}"; s="${s//Л/L}"
+  s="${s//м/m}"; s="${s//М/M}"
+  s="${s//н/n}"; s="${s//Н/N}"
+  s="${s//о/o}"; s="${s//О/O}"
+  s="${s//п/p}"; s="${s//П/P}"
+  s="${s//р/r}"; s="${s//Р/R}"
+  s="${s//с/s}"; s="${s//С/S}"
+  s="${s//т/t}"; s="${s//Т/T}"
+  s="${s//у/u}"; s="${s//У/U}"
+  s="${s//ф/f}"; s="${s//Ф/F}"
+  s="${s//х/kh}"; s="${s//Х/Kh}"
+  s=$(printf '%s' "$s" | tr 'A-Z' 'a-z')
+  s="${s// /-}"
+  s=$(printf '%s' "$s" | tr -c 'a-z0-9.-' '-')
+  while [[ "$s" == *--* ]]; do s="${s//--/-}"; done
+  s="${s#-}"; s="${s%-}"
+  [ -z "$s" ] && s=$(printf '%s' "$1" | cksum | cut -d' ' -f1)
+  printf '%s' "$s"
+}
+
 if [ -f "$HOST_DIR/.agents.env" ]; then
     PORT_ENV_FILE="$HOST_DIR/.agents.env"
 elif [ -f "$SCRIPT_DIR/.env" ]; then
@@ -97,7 +145,7 @@ fi
 MOUNT_NAME=$(_get_env_from "MOUNT_NAME" "$PORT_ENV_FILE")
 _DIR_NAME="${MOUNT_NAME:-$(basename "$HOST_DIR")}"
 CONTAINER_WORKDIR="/var/www/$_DIR_NAME"
-CONTAINER_NAME="agents-$_DIR_NAME"
+CONTAINER_NAME="agents-$(_sanitize_name "$_DIR_NAME")"
 
 EXTRA_PATH=$(_get_env_from "EXTRA_PATH" "$PORT_ENV_FILE")
 [ -z "$EXTRA_PATH" ] && [ -f "$SCRIPT_DIR/.env" ] && EXTRA_PATH=$(_get_env_from "EXTRA_PATH" "$SCRIPT_DIR/.env")

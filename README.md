@@ -30,6 +30,8 @@ Port forwarding settings (`FWD_HOST_PORT`, `FWD_CONTAINER_PORT`) can be placed i
 
 You can also set `MOUNT_NAME` in `.agents.env` — the project name inside the container. It determines the mount path (`/var/www/<MOUNT_NAME>`) and the container name (`agents-<MOUNT_NAME>`). By default, the current host directory name is used, but for projects with generic names (e.g., `app`, `src`, `backend`) it's convenient to set a meaningful name: `MOUNT_NAME=my-project`.
 
+Container names are automatically transliterated and sanitized (Cyrillic → Latin, special characters → hyphens). The mount path inside the container preserves the original directory name.
+
 ### Key `.env` variables
 
 | Variable | Purpose |
@@ -209,6 +211,8 @@ Docker-образ «всё-в-одном» для запуска ИИ-кодин
 
 Там же, в `.agents.env`, можно задать `MOUNT_NAME` — имя проекта внутри контейнера. Определяет путь маунта (`/var/www/<MOUNT_NAME>`) и имя контейнера (`agents-<MOUNT_NAME>`). По умолчанию используется имя текущей директории хоста, но для проектов с типовой структурой (например, `app`, `src`, `backend`) удобно задать осмысленное имя: `MOUNT_NAME=my-project`.
 
+Имя контейнера автоматически транслитерируется и санитизируется (кириллица → латиница, спецсимволы → дефисы). Путь монтирования внутри контейнера сохраняет оригинальное имя директории.
+
 ### Ключевые переменные `.env`
 
 |Переменная|Назначение|
@@ -384,6 +388,8 @@ https://github.com/laravel-ls/laravel-ls \
 端口转发设置（`FWD_HOST_PORT`、`FWD_CONTAINER_PORT`）可以放在特定项目根目录的 `.agents.env` 中——它们将从那里读取。模板：`.agents.env.example`。如果项目中没有 `.agents.env`，则使用 `.env` 中的配置作为后备。
 
 在同一 `.agents.env` 中，还可以设置 `MOUNT_NAME`——容器内的项目名称。它决定了挂载路径（`/var/www/<MOUNT_NAME>`）和容器名称（`agents-<MOUNT_NAME>`）。默认使用当前宿主机目录名称，但对于具有通用名称的项目（例如 `app`、`src`、`backend`），建议设置一个有意义的名称：`MOUNT_NAME=my-project`。
+
+容器名称会自动进行音译和清理（西里尔字母 → 拉丁字母，特殊字符 → 连字符）。容器内的挂载路径保留原始目录名称。
 
 ### 主要 `.env` 变量
 
