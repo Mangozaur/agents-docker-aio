@@ -111,6 +111,8 @@ RUN env -u NPM_CONFIG_PREFIX npm i -g @upstash/context7-mcp@latest \
     && cargo install phpantom_lsp --locked \
     && go install github.com/laravel-ls/laravel-ls/cmd/laravel-ls@latest
 
+RUN echo "prefix=/home/dev/.npm-global" > /root/.npmrc
+
 SHELL ["/bin/bash", "-c"]
 
 WORKDIR /var/www/html
