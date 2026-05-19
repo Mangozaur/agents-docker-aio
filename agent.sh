@@ -150,6 +150,8 @@ CONTAINER_NAME="agents-$(_sanitize_name "$_DIR_NAME")-$(head -c 4 /dev/urandom |
 EXTRA_PATH=$(_get_env_from "EXTRA_PATH" "$PORT_ENV_FILE")
 [ -z "$EXTRA_PATH" ] && [ -f "$SCRIPT_DIR/.env" ] && EXTRA_PATH=$(_get_env_from "EXTRA_PATH" "$SCRIPT_DIR/.env")
 
+DOCKER_NETWORK=$(_get_env_from "DOCKER_NETWORK" "$PORT_ENV_FILE")
+
 EXEC_BEFORE=$(_get_env_from "EXEC_BEFORE" "$PORT_ENV_FILE")
 EXEC_AFTER=$(_get_env_from "EXEC_AFTER" "$PORT_ENV_FILE")
 
@@ -158,6 +160,13 @@ if [ -n "$EXEC_AFTER" ]; then
     trap 'eval "$EXEC_AFTER"' EXIT
 else
     _exec_or_run() { exec "$@"; }
+fi
+
+if [ -n "$DOCKER_NETWORK" ]; then
+    NETWORK_ARGS=("--network" "$DOCKER_NETWORK")
+    echo "🔗 Docker network: $DOCKER_NETWORK" >&2
+else
+    NETWORK_ARGS=()
 fi
 
 if [ -n "$EXEC_BEFORE" ]; then
@@ -232,6 +241,7 @@ _exec_or_run docker run -it --rm \
   "${PORT_ARGS[@]}" \
   "${WSL_ARGS[@]}" \
   "${DOCKER_ARGS[@]}" \
+  "${NETWORK_ARGS[@]}" \
   --hostname dev \
   --add-host=host.docker.internal:host-gateway \
   "$DEV_IMAGE" "${CMD[@]}"

@@ -51,6 +51,7 @@ Container names are automatically transliterated and sanitized (Cyrillic → Lat
 | `FWD_CONTAINER_PORT` | Port inside the container to forward outward (overrides `.env`) |
 | `FWD_HOST_PORT` | Preferred host port (overrides `.env`) |
 | `ENABLE_DOCKER` | Forward Docker socket (overrides `.env`). `true` by default |
+| `DOCKER_NETWORK` | Docker network to connect the container to. Default bridge network is used if not set |
 | `EXEC_BEFORE` | Command executed on the host before starting the container |
 | `EXEC_AFTER` | Command executed on the host after stopping the container |
 | `EXTRA_PATH` | Additional paths separated by `:`, appended to `$PATH` inside the container. Allows adding binaries from a persistent volume without rebuilding the image |
@@ -232,6 +233,7 @@ Docker-образ «всё-в-одном» для запуска ИИ-кодин
 |`FWD_CONTAINER_PORT`|Порт внутри контейнера для проброса наружу (переопределяет `.env`)|
 |`FWD_HOST_PORT`|Предпочитаемый порт на хосте (переопределяет `.env`)|
 |`ENABLE_DOCKER`|Проброс Docker-сокета (переопределяет `.env`). `true` по умолчанию|
+|`DOCKER_NETWORK`|Сеть Docker, к которой подключить контейнер. Если не указана — используется сеть по умолчанию (bridge)|
 |`EXEC_BEFORE`|Команда, выполняемая на хосте перед запуском контейнера|
 |`EXEC_AFTER`|Команда, выполняемая на хосте после остановки контейнера|
 |`EXTRA_PATH`|Дополнительные пути через `:`, добавляемые в `$PATH` внутри контейнера. Позволяет добавлять бинарники из персистентного тома без пересборки образа|
@@ -410,6 +412,7 @@ https://github.com/laravel-ls/laravel-ls \
 | `FWD_CONTAINER_PORT` | 容器内要向外转发的端口（覆盖 `.env`） |
 | `FWD_HOST_PORT` | 首选宿主机端口（覆盖 `.env`） |
 | `ENABLE_DOCKER` | 转发 Docker 套接字（覆盖 `.env`）。默认为 `true` |
+| `DOCKER_NETWORK` | 要将容器连接到的 Docker 网络。如果未设置，则使用默认的 bridge 网络 |
 | `EXEC_BEFORE` | 启动容器前在宿主机上执行的命令 |
 | `EXEC_AFTER` | 停止容器后在宿主机上执行的命令 |
 | `EXTRA_PATH` | 以 `:` 分隔的附加路径，添加到容器内的 `$PATH` 中。允许从持久卷添加二进制文件而无需重新构建镜像 |
