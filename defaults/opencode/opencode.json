@@ -8,14 +8,6 @@
     }
   },
   "lsp": {
-    "php-lsp": {
-      "command": [
-        "php-lsp"
-      ],
-      "extensions": [
-        ".php"
-      ]
-    },
     "laravel": {
       "command": [
         "laravel-ls"
