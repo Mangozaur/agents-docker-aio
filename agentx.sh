@@ -205,12 +205,18 @@ mount_if_exists() {
     fi
 }
 
+mount_if_exists "$HOME/.ai"                  "$CONTAINER_HOME/.ai"                  "ro"
 mount_if_exists "$SCRIPT_DIR/defaults/opencode/opencode.json" "/opt/defaults/opencode/opencode.json" "ro"
 mount_if_exists "$HOME/.bashrc"              "$CONTAINER_HOME/.bashrc"              "ro"
+
 mount_if_exists "$HOME/.config/opencode"     "$CONTAINER_HOME/.config/opencode"     "rw"
+mount_if_exists "$HOME/.claude"              "$CONTAINER_HOME/.claude"              "rw"
+mount_if_exists "$HOME/.qwen"                "$CONTAINER_HOME/.qwen"                "rw"
+mount_if_exists "$HOME/.codex"               "$CONTAINER_HOME/.codex"               "rw"
 
 mount_if_exists "$HOME/.gitconfig"           "$CONTAINER_HOME/.gitconfig"           "ro"
 mount_if_exists "$HOME/.npmrc"               "$CONTAINER_HOME/.npmrc"               "ro"
+mount_if_exists "$HOME/.ssh"                 "$CONTAINER_HOME/.ssh"                 "ro"
 mount_if_exists "$HOME/.config/git"          "$CONTAINER_HOME/.config/git"          "ro"
 mount_if_exists "$HOME/.docker/config.json"  "$CONTAINER_HOME/.docker/config.json"  "ro"
 
