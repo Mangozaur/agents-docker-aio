@@ -205,7 +205,7 @@ mount_if_exists() {
     fi
 }
 
-mount_if_exists "$HOME/.ai"                  "$CONTAINER_HOME/.ai"                  "ro"
+mount_if_exists "$HOME/.ai"                  "$CONTAINER_HOME/.ai"                  "rw"
 mount_if_exists "$SCRIPT_DIR/defaults/opencode/opencode.json" "/opt/defaults/opencode/opencode.json" "ro"
 mount_if_exists "$HOME/.bashrc"              "$CONTAINER_HOME/.bashrc"              "ro"
 
