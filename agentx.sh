@@ -252,7 +252,7 @@ case "$CONTAINER_STATE" in
           --init \
           --name "$CONTAINER_NAME" \
           -v "$DEV_VOLUME:$CONTAINER_HOME" \
-          "${EXTRA_VOLUMES[@]}" \
+          ${EXTRA_VOLUMES+"${EXTRA_VOLUMES[@]}"} \
           -v "$HOST_DIR:$CONTAINER_WORKDIR" \
           -w "$CONTAINER_WORKDIR" \
           -e HOME="$CONTAINER_HOME" \
@@ -263,11 +263,11 @@ case "$CONTAINER_STATE" in
           -e HOST_UID="$(id -u)" \
           -e HOST_GID="$(id -g)" \
           -e EXTRA_PATH="${EXTRA_PATH:-}" \
-          "${ENV_ARGS[@]}" \
-          "${PORT_ARGS[@]}" \
-          "${WSL_ARGS[@]}" \
-          "${DOCKER_ARGS[@]}" \
-          "${NETWORK_ARGS[@]}" \
+          ${ENV_ARGS+"${ENV_ARGS[@]}"} \
+          ${PORT_ARGS+"${PORT_ARGS[@]}"} \
+          ${WSL_ARGS+"${WSL_ARGS[@]}"} \
+          ${DOCKER_ARGS+"${DOCKER_ARGS[@]}"} \
+          ${NETWORK_ARGS+"${NETWORK_ARGS[@]}"} \
           --hostname dev \
           --add-host=host.docker.internal:host-gateway \
           "$DEV_IMAGE" "${CMD[@]}"
