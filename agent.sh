@@ -219,6 +219,7 @@ mount_if_exists "$HOME/.npmrc"               "$CONTAINER_HOME/.npmrc"           
 mount_if_exists "$HOME/.ssh"                 "$CONTAINER_HOME/.ssh"                 "ro"
 mount_if_exists "$HOME/.config/git"          "$CONTAINER_HOME/.config/git"          "ro"
 mount_if_exists "$HOME/.docker/config.json"  "$CONTAINER_HOME/.docker/config.json"  "ro"
+mount_if_exists "$HOME/bin"                  "$CONTAINER_HOME/bin"                  "rw"
 
 # 🚀 One-shot run — container is removed on exit
 _exec_or_run docker run -it --rm \
