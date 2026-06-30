@@ -1,7 +1,7 @@
 FROM php:8.4-fpm
 
 # Настраиваем пути
-ENV PATH=/opt/wrapper:/home/dev/.npm-global/bin:/opt/go/bin:/usr/local/cargo/bin:$PATH \
+ENV PATH=/opt/wrapper:/home/dev/bin:/home/dev/.npm-global/bin:/opt/go/bin:/usr/local/cargo/bin:$PATH \
     CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
     RUST_VERSION=stable \
