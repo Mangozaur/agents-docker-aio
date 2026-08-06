@@ -53,8 +53,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
             pcntl \
             intl \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-       | sh -s -- -y --no-modify-path --default-toolchain ${RUST_VERSION:-stable} \
-    && rustup component add rustfmt clippy 2>/dev/null || true
+       | sh -s -- -y --no-modify-path --profile minimal --default-toolchain ${RUST_VERSION:-stable} \
+    && (rustup component add rustfmt clippy 2>/dev/null || true) \
+    && rm -rf /usr/local/rustup/downloads /usr/local/rustup/tmp
 
 # Python 3.13 + pip (multi-stage из официального образа)
 COPY --from=python:3.13-slim-bookworm /usr/local/bin/python3.13 /usr/local/bin/
@@ -84,6 +85,12 @@ RUN groupadd --gid 999 docker \
        > /etc/sudoers.d/dev-nopasswd \
     && chmod 0440 /etc/sudoers.d/dev-nopasswd
 
+# Каталоги-родители бинд-маунтов (~/.config/opencode, ~/.config/git и т.п.).
+# Если их нет, Docker создаст их при монтировании от root — уже после того,
+# как agent.sh успел выправить владельца на томе, и dev не сможет туда писать.
+RUN mkdir -p /home/dev/.config \
+    && chown dev:dev /home/dev/.config
+
 # Установка Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -98,7 +105,22 @@ RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
 RUN env -u NPM_CONFIG_PREFIX npm i -g opencode-ai \
     && env -u NPM_CONFIG_PREFIX npm i -g @anthropic-ai/claude-code \
     && env -u NPM_CONFIG_PREFIX npm i -g @openai/codex \
-    && env -u NPM_CONFIG_PREFIX npm i -g @qwen-code/qwen-code@latest
+    && env -u NPM_CONFIG_PREFIX npm i -g @qwen-code/qwen-code@latest \
+    # Агенты тянут опциональные бинарники под все платформы. Образ glibc-based,
+    # поэтому musl/darwin/win32-варианты — мёртвый вес.
+    # Чистка обязана быть в этом же слое: rm в следующей инструкции размер не уменьшит.
+    && find /usr/local/lib/node_modules -maxdepth 4 -type d \
+         \( -name '*-musl' -o -name '*darwin*' -o -name '*win32*' \) \
+         -prune -exec rm -rf {} + \
+    # claude-code: postinstall уже скопировал нативный бинарник в bin/claude.exe,
+    # пакеты в node_modules/ — fallback на случай --ignore-scripts (543 МБ).
+    # NB: у @openai/codex платформенный пакет, наоборот, рабочий (vendor/*-musl) — не трогать.
+    && test -x /usr/local/lib/node_modules/@anthropic-ai/claude-code/bin/claude.exe \
+    && rm -rf /usr/local/lib/node_modules/@anthropic-ai/claude-code/node_modules \
+    && env -u NPM_CONFIG_PREFIX npm cache clean --force \
+    # Чистка выше завязана на внутреннюю раскладку пакетов: если она поедет
+    # на новом релизе, пусть падает сборка, а не агент у пользователя.
+    && for a in claude codex opencode qwen; do "$a" --version > /dev/null || exit 1; done
 
 # Обходы для слишком подозрительных
 RUN mkdir -p /opt/wrapper
@@ -110,7 +132,12 @@ RUN chmod -R 0777 /opt/wrapper/
 RUN env -u NPM_CONFIG_PREFIX npm i -g @upstash/context7-mcp@latest \
     && cargo install php-lsp --locked \
     && cargo install phpantom_lsp --locked \
-    && go install github.com/laravel-ls/laravel-ls/cmd/laravel-ls@latest
+    && cargo install --git https://github.com/rtk-ai/rtk \
+    && go install github.com/laravel-ls/laravel-ls/cmd/laravel-ls@latest \
+    # Кэши сборки cargo/go/npm нужны только на этапе установки (~800 МБ).
+    && rm -rf "${CARGO_HOME}/registry" "${CARGO_HOME}/git" \
+    && go clean -cache -modcache -testcache \
+    && env -u NPM_CONFIG_PREFIX npm cache clean --force
 
 RUN echo "prefix=/home/dev/.npm-global" > /root/.npmrc
 

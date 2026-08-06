@@ -164,6 +164,20 @@ Command: `laravel-ls`
 
 A dedicated LSP for Laravel.
 
+### RTK
+https://github.com/rtk-ai/rtk
+A plugin for agents.
+RTK intercepts shell commands and compresses their output before it reaches the agents. Insignificant lines, repetitions, etc. are discarded.
+In some cases, this can reduce the output by up to 90%.
+
+To add it to an agent, run the command inside the container:
+
+| Agent    | Command                |
+|----------|------------------------|
+| Claude   | rtk init -g            |
+| Codex    | rtk init -g --codex    |
+| OpenCode | rtk init -g --opencode |
+
 ## Helpers
 
 ### chrome-mcp
@@ -341,6 +355,20 @@ https://github.com/laravel-ls/laravel-ls \
 Команда: `laravel-ls`
 
 Отдельный LSP для Ларавел
+
+### RTK
+https://github.com/rtk-ai/rtk
+Плагин для агентов.
+RTK перехватывает shell команды и сжимает их вывод до того, как он попадает к агентам. Выбрасываются незначимые строки, повторения и т.п.
+В некоторых случаях это может сократить вывод до 90%.
+
+Для добавления в агента нужно в контейнере выполнить команду:
+
+| Агент    | Команда                |
+|----------|------------------------|
+| Claude   | rtk init -g            |
+| Codex    | rtk init -g --codex    |
+| OpenCode | rtk init -g --opencode |
 
 ## Хелперы
 
@@ -524,6 +552,20 @@ https://github.com/laravel-ls/laravel-ls \
 命令：`laravel-ls`
 
 Laravel 专用 LSP。
+
+### RTK
+https://github.com/rtk-ai/rtk
+代理插件。
+RTK 拦截 shell 命令，并在输出到达代理之前对其进行压缩。会丢弃无关紧要的行、重复内容等。
+在某些情况下，可将输出减少高达 90%。
+
+要将其添加到代理中，请在容器内执行以下命令：
+
+| 代理      | 命令                    |
+|----------|------------------------|
+| Claude   | rtk init -g            |
+| Codex    | rtk init -g --codex    |
+| OpenCode | rtk init -g --opencode |
 
 ## 辅助工具
 

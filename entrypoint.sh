@@ -26,6 +26,13 @@ chmod 0440 /etc/sudoers.d/dev-nopasswd
 # Fix home directory permissions
 chown "$TARGET_UID:$TARGET_GID" /home/dev 2>/dev/null || true
 
+# Docker создаёт недостающие родительские каталоги бинд-маунтов от root.
+# Выправляем владельца нерекурсивно — рекурсия залезла бы внутрь самих
+# бинд-маунтов и переписала права хостовых файлов.
+for d in /home/dev/.config; do
+    [ -d "$d" ] && chown "$TARGET_UID:$TARGET_GID" "$d" 2>/dev/null || true
+done
+
 # Create npm prefix dir if volume is empty
 mkdir -p /home/dev/.npm-global/bin /home/dev/.npm-global/lib/node_modules
 chown -R "$TARGET_UID:$TARGET_GID" /home/dev/.npm-global
