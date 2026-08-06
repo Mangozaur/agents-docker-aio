@@ -56,4 +56,10 @@ fi
 
 [ -n "${EXTRA_PATH:-}" ] && export PATH="$EXTRA_PATH:$PATH"
 
+# /etc/profile в Debian безусловно перезаписывает PATH, поэтому login-шеллы
+# (`bash -lc`, как их запускает часть агентов) теряют /opt/wrapper, cargo, go
+# и ~/.npm-global. Сохраняем итоговый PATH отдельно — /etc/profile.d/00-agents-path.sh
+# восстановит его из этой переменной.
+export AGENTS_PATH="$PATH"
+
 exec gosu "$TARGET_UID" "$@"

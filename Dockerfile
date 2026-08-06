@@ -145,6 +145,9 @@ SHELL ["/bin/bash", "-c"]
 
 WORKDIR /var/www/html
 
+COPY profile.d/ /etc/profile.d/
+RUN chmod 0644 /etc/profile.d/*.sh
+
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
