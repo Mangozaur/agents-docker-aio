@@ -180,12 +180,82 @@ To add it to an agent, run the command inside the container:
 
 ## Helpers
 
-### chrome-mcp
+### chrome-devtools 
 
-A wrapper for `chrome-devtools-mcp`. Use it as an MCP server if the standard one can't connect to a Chrome instance on the host machine.
+https://developer.chrome.com/blog/chrome-devtools-mcp#get_started
+It is recommended to launch Chrome with the flags `--remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --remote-allow-origins=*  --no-first-run --no-default-browser-check  --user-data-dir="<temp-directory-for-profile>"`
+
+#### Connecting from a container
+The `chrome-mcp` script is a wrapper for `chrome-devtools-mcp`. Use it as an MCP server if the standard one can't connect to a Chrome instance on the host machine.
 This issue appears, for example, in Windows WSL. Inside the container, you need to find the correct IP to send the request to.
 The situation is further complicated by the fact that Chrome in remote-debugging mode expects connections by IP, without using hostnames. So the standard `host.docker.internal` won't work.
-It is recommended to launch Chrome with the flags `--remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --remote-allow-origins=* --no-first-run --no-default-browser-check --user-data-dir="<temp-directory-for-profile>"`
+
+For Claude Code there is a plugin-based option:
+In the project `.claude/chrome-mcp-launcher.cjs`
+
+```js
+const net = require('net');
+const dns = require('dns');
+const { spawn } = require('child_process');
+
+const LISTEN_HOST = '127.0.0.1';
+const PORT = 9222;
+const TARGET_HOST = 'host.docker.internal';
+
+function startProxy() {
+    return new Promise((resolve) => {
+        const server = net.createServer((client) => {
+            // family: 4 is mandatory: host.docker.internal also resolves to an IPv6 address,
+            // which is unreachable from the container (Network is unreachable).
+            dns.lookup(TARGET_HOST, { family: 4 }, (err, address) => {
+                if (err) {
+                    client.destroy();
+                    return;
+                }
+                const upstream = net.connect({ host: address, port: PORT });
+                upstream.on('error', () => client.destroy());
+                client.on('error', () => upstream.destroy());
+                client.pipe(upstream);
+                upstream.pipe(client);
+            });
+        });
+
+        server.on('error', (e) => {
+            // Port is already in use — the proxy has been started by another session, just use it.
+            if (e.code !== 'EADDRINUSE') {
+                console.error('[cdp-proxy] ' + e.message);
+            }
+            resolve();
+        });
+
+        server.listen(PORT, LISTEN_HOST, () => {
+            server.unref();
+            resolve();
+        });
+    });
+}
+
+startProxy().then(() => {
+    const child = spawn(
+        'npx',
+        ['-y', 'chrome-devtools-mcp@latest', '--browserUrl', `http://${LISTEN_HOST}:${PORT}`],
+        { stdio: 'inherit' },
+    );
+    child.on('exit', (code) => process.exit(code ?? 0));
+});
+```
+
+The MCP in `.mcp.json` is connected as
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "node",
+      "args": [".claude/chrome-mcp-launcher.cjs"]
+    }
+  }
+}
+```
 
 ## Build
 
@@ -372,12 +442,82 @@ RTK перехватывает shell команды и сжимает их вы�
 
 ## Хелперы
 
-### chrome-mcp
+### chrome-devtools 
 
-Обертка для `chrome-devtools-mcp`. Прописывайте ее как mcp-сервер, если стандартный не может подсоединиться к инстансу Chrome на хост-машине.
+https://developer.chrome.com/blog/chrome-devtools-mcp#get_started
+Рекомендуется запускать Chrome с флагами `--remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --remote-allow-origins=*  --no-first-run --no-default-browser-check  --user-data-dir="<временная-директория-для-профиля>"`
+
+#### Подключение из контейнера
+Скрипт `chrome-mcp` - обертка для `chrome-devtools-mcp`. Прописывайте ее как mcp-сервер, если стандартный не может подсоединиться к инстансу Chrome на хост-машине.
 Проблема проявляется, например, в Windows WSL. Внутри контейнера нужно найти правильной IP, на который отправить запрос.
 Ситуация еще усугубляется тем, что сам Chrome в режиме remote-debugging ожидает подключения по IP, без использования хостнеймов. Поэтому стандартный host.docker.internal использовать не получится.
-Рекомендуется запускать Chrome с флагами `--remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --remote-allow-origins=*  --no-first-run --no-default-browser-check  --user-data-dir="<временная-директория-для-профиля>"` 
+
+Для Claude Code есть вариант с плагином:
+В проекте `.claude/chrome-mcp-launcher.cjs`
+
+```js
+const net = require('net');
+const dns = require('dns');
+const { spawn } = require('child_process');
+
+const LISTEN_HOST = '127.0.0.1';
+const PORT = 9222;
+const TARGET_HOST = 'host.docker.internal';
+
+function startProxy() {
+    return new Promise((resolve) => {
+        const server = net.createServer((client) => {
+            // family: 4 обязателен: host.docker.internal резолвится ещё и в IPv6-адрес,
+            // который из контейнера недоступен (Network is unreachable).
+            dns.lookup(TARGET_HOST, { family: 4 }, (err, address) => {
+                if (err) {
+                    client.destroy();
+                    return;
+                }
+                const upstream = net.connect({ host: address, port: PORT });
+                upstream.on('error', () => client.destroy());
+                client.on('error', () => upstream.destroy());
+                client.pipe(upstream);
+                upstream.pipe(client);
+            });
+        });
+
+        server.on('error', (e) => {
+            // Порт уже занят — значит прокси поднят другой сессией, просто используем его.
+            if (e.code !== 'EADDRINUSE') {
+                console.error('[cdp-proxy] ' + e.message);
+            }
+            resolve();
+        });
+
+        server.listen(PORT, LISTEN_HOST, () => {
+            server.unref();
+            resolve();
+        });
+    });
+}
+
+startProxy().then(() => {
+    const child = spawn(
+        'npx',
+        ['-y', 'chrome-devtools-mcp@latest', '--browserUrl', `http://${LISTEN_HOST}:${PORT}`],
+        { stdio: 'inherit' },
+    );
+    child.on('exit', (code) => process.exit(code ?? 0));
+});
+```
+
+MCP в `.mcp.json` подключается как
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "node",
+      "args": [".claude/chrome-mcp-launcher.cjs"]
+    }
+  }
+}
+```
 
 ## Сборка
 
@@ -569,12 +709,82 @@ RTK 拦截 shell 命令，并在输出到达代理之前对其进行压缩。会
 
 ## 辅助工具
 
-### chrome-mcp
+### chrome-devtools 
 
-`chrome-devtools-mcp` 的包装器。如果标准 MCP 无法连接到宿主机上的 Chrome 实例，请将其作为 MCP 服务器使用。
+https://developer.chrome.com/blog/chrome-devtools-mcp#get_started
+建议使用以下标志启动 Chrome：`--remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --remote-allow-origins=*  --no-first-run --no-default-browser-check  --user-data-dir="<临时配置文件目录>"`
+
+#### 从容器内连接
+`chrome-mcp` 脚本是 `chrome-devtools-mcp` 的包装器。如果标准 MCP 无法连接到宿主机上的 Chrome 实例，请将其作为 MCP 服务器使用。
 例如在 Windows WSL 中会出现此问题。在容器内需要找到正确的 IP 来发送请求。
 情况更加复杂的是，Chrome 在 remote-debugging 模式下期望按 IP 连接，不支持主机名。因此无法使用标准的 `host.docker.internal`。
-建议使用以下标志启动 Chrome：`--remote-debugging-address=0.0.0.0 --remote-debugging-port=9222 --remote-allow-origins=* --no-first-run --no-default-browser-check --user-data-dir="<临时配置文件目录>"`
+
+对于 Claude Code，有一种插件方式：
+在项目中 `.claude/chrome-mcp-launcher.cjs`
+
+```js
+const net = require('net');
+const dns = require('dns');
+const { spawn } = require('child_process');
+
+const LISTEN_HOST = '127.0.0.1';
+const PORT = 9222;
+const TARGET_HOST = 'host.docker.internal';
+
+function startProxy() {
+    return new Promise((resolve) => {
+        const server = net.createServer((client) => {
+            // family: 4 是必需的：host.docker.internal 还会解析为 IPv6 地址，
+            // 而该地址从容器内无法访问（Network is unreachable）。
+            dns.lookup(TARGET_HOST, { family: 4 }, (err, address) => {
+                if (err) {
+                    client.destroy();
+                    return;
+                }
+                const upstream = net.connect({ host: address, port: PORT });
+                upstream.on('error', () => client.destroy());
+                client.on('error', () => upstream.destroy());
+                client.pipe(upstream);
+                upstream.pipe(client);
+            });
+        });
+
+        server.on('error', (e) => {
+            // 端口已被占用——说明代理已由其他会话启动，直接使用即可。
+            if (e.code !== 'EADDRINUSE') {
+                console.error('[cdp-proxy] ' + e.message);
+            }
+            resolve();
+        });
+
+        server.listen(PORT, LISTEN_HOST, () => {
+            server.unref();
+            resolve();
+        });
+    });
+}
+
+startProxy().then(() => {
+    const child = spawn(
+        'npx',
+        ['-y', 'chrome-devtools-mcp@latest', '--browserUrl', `http://${LISTEN_HOST}:${PORT}`],
+        { stdio: 'inherit' },
+    );
+    child.on('exit', (code) => process.exit(code ?? 0));
+});
+```
+
+`.mcp.json` 中的 MCP 按如下方式连接
+```json
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "node",
+      "args": [".claude/chrome-mcp-launcher.cjs"]
+    }
+  }
+}
+```
 
 ## 构建
 
