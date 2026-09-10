@@ -8,6 +8,24 @@ DEV_IMAGE="${DEV_IMAGE:-agents}"
 DEV_VOLUME="agents-dev-home"
 CONTAINER_HOME="/home/dev"
 
+# 🎛️ CLI options (must precede the project directory):
+#   --worktree / --no-worktree   force on/off mounting the main repo of a git worktree
+#   --docker   / --no-docker     force on/off Docker socket forwarding
+CLI_WORKTREE=""
+CLI_DOCKER=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --worktree)    CLI_WORKTREE=true ;;
+        --no-worktree) CLI_WORKTREE=false ;;
+        --docker)      CLI_DOCKER=true ;;
+        --no-docker)   CLI_DOCKER=false ;;
+        --) shift; break ;;
+        --*) echo "❌ Unknown option: $1" >&2; exit 1 ;;
+        *) break ;;
+    esac
+    shift
+done
+
 # 📁 Project directory (argument or current)
 if [ $# -gt 0 ]; then
     HOST_DIR="$1"
@@ -191,9 +209,33 @@ ENABLE_DOCKER=$(_get_env_from "ENABLE_DOCKER" "$PORT_ENV_FILE")
 if [ -z "$ENABLE_DOCKER" ] && [ -f "$SCRIPT_DIR/.env" ]; then
     ENABLE_DOCKER=$(_get_env_from "ENABLE_DOCKER" "$SCRIPT_DIR/.env")
 fi
+[ -n "$CLI_DOCKER" ] && ENABLE_DOCKER="$CLI_DOCKER"
 if [[ "${ENABLE_DOCKER:-true}" != "false" ]] && [ -S /var/run/docker.sock ]; then
     DOCKER_ARGS+=("-v" "/var/run/docker.sock:/var/run/docker.sock")
     echo "🐳 Docker socket forwarded" >&2
+fi
+
+# 🌿 Git worktree: mount the main repo's .git at the same absolute path as on the host,
+# because the worktree's `.git` file and the main repo point to each other by absolute paths.
+WORKTREE_ARGS=()
+ENABLE_WORKTREE=$(_get_env_from "ENABLE_WORKTREE" "$PORT_ENV_FILE")
+if [ -z "$ENABLE_WORKTREE" ] && [ -f "$SCRIPT_DIR/.env" ]; then
+    ENABLE_WORKTREE=$(_get_env_from "ENABLE_WORKTREE" "$SCRIPT_DIR/.env")
+fi
+[ -n "$CLI_WORKTREE" ] && ENABLE_WORKTREE="$CLI_WORKTREE"
+if [[ "${ENABLE_WORKTREE:-true}" != "false" ]] && [ -f "$HOST_DIR/.git" ]; then
+    _GITDIR=$(sed -n 's/^gitdir: //p' "$HOST_DIR/.git" | head -n1)
+    if [[ "$_GITDIR" != /* ]]; then
+        echo "⚠️  Git worktree uses a relative gitdir ($_GITDIR); main repo not mounted" >&2
+    elif [[ "$_GITDIR" == */worktrees/* ]]; then
+        GIT_COMMON_DIR="${_GITDIR%/worktrees/*}"
+        if [ -d "$GIT_COMMON_DIR/objects" ]; then
+            WORKTREE_ARGS+=("-v" "$GIT_COMMON_DIR:$GIT_COMMON_DIR:rw")
+            echo "🌿 Git worktree: main repo mounted ($GIT_COMMON_DIR)" >&2
+        else
+            echo "⚠️  Git worktree: main repo not found at $GIT_COMMON_DIR" >&2
+        fi
+    fi
 fi
 
 # 🔗 Selective mounts
@@ -242,6 +284,7 @@ _exec_or_run docker run -it --rm \
   ${PORT_ARGS+"${PORT_ARGS[@]}"} \
   ${WSL_ARGS+"${WSL_ARGS[@]}"} \
   ${DOCKER_ARGS+"${DOCKER_ARGS[@]}"} \
+  ${WORKTREE_ARGS+"${WORKTREE_ARGS[@]}"} \
   ${NETWORK_ARGS+"${NETWORK_ARGS[@]}"} \
   --hostname dev \
   --add-host=host.docker.internal:host-gateway \

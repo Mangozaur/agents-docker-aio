@@ -42,6 +42,7 @@ Container names are automatically transliterated and sanitized (Cyrillic → Lat
 | `FWD_CONTAINER_PORT` | Port inside the container to forward outward |
 | `FWD_HOST_PORT` | Preferred host port; if occupied — a random one is used |
 | `ENABLE_DOCKER` | Forward Docker socket into the container (DooD). `true` by default |
+| `ENABLE_WORKTREE` | Mount the main repo's `.git` when the project is a git worktree. `true` by default |
 
 ### `.agents.env` variables (in project root)
 
@@ -51,6 +52,7 @@ Container names are automatically transliterated and sanitized (Cyrillic → Lat
 | `FWD_CONTAINER_PORT` | Port inside the container to forward outward (overrides `.env`) |
 | `FWD_HOST_PORT` | Preferred host port (overrides `.env`) |
 | `ENABLE_DOCKER` | Forward Docker socket (overrides `.env`). `true` by default |
+| `ENABLE_WORKTREE` | Mount the main repo's `.git` for a git worktree (overrides `.env`). `true` by default |
 | `DOCKER_NETWORK` | Docker network to connect the container to. Default bridge network is used if not set |
 | `EXEC_BEFORE` | Command executed on the host before starting the container |
 | `EXEC_AFTER` | Command executed on the host after stopping the container |
@@ -59,9 +61,10 @@ Container names are automatically transliterated and sanitized (Cyrillic → Lat
 ## Usage
 
 ```
-agent.sh <workdir> <exec>
+agent.sh [options] <workdir> <exec>
 ```
 
+`options` — flags that must precede `workdir`: `--worktree` / `--no-worktree`, `--docker` / `--no-docker`. They override `ENABLE_WORKTREE` / `ENABLE_DOCKER` from `.env` and `.agents.env` \
 `workdir` — working directory. Defaults to the current directory from which the script was called \
 `exec` — command to be executed inside the container. Defaults to `bash`
 
@@ -93,7 +96,15 @@ There is also a script `agentx.sh` — it works the same way but creates **persi
 
 Inside the container, `docker` and `docker compose` commands are available — they work with the host's Docker daemon via the forwarded Unix socket `/var/run/docker.sock`.
 
-Works on macOS (Docker Desktop), Linux, and WSL without additional configuration — if the socket exists on the host, it's forwarded automatically. To disable, set `ENABLE_DOCKER=false` in `.env` or `.agents.env`.
+Works on macOS (Docker Desktop), Linux, and WSL without additional configuration — if the socket exists on the host, it's forwarded automatically. To disable, set `ENABLE_DOCKER=false` in `.env` or `.agents.env`, or pass `--no-docker`.
+
+### Git worktree
+
+If the project directory is a linked git worktree (`.git` is a file pointing to `<main>/.git/worktrees/<name>`), the main repository's `.git` is mounted into the container at the same absolute path as on the host — git resolves worktrees via absolute paths, so without this even `git status` fails inside the container. The startup log shows `🌿 Git worktree: main repo mounted (...)`.
+
+To disable, set `ENABLE_WORKTREE=false` in `.env` or `.agents.env`, or pass `--no-worktree`. The CLI flag is handy for worktrees since `.agents.env` is usually not committed and thus missing in every new worktree. Relative `gitdir` paths (`worktree.useRelativePaths`) are not supported — a warning is printed and nothing is mounted.
+
+For `agentx.sh` the mount is fixed when the container is created — flags passed on reconnect are ignored (with a warning).
 
 ### User data
 
@@ -308,6 +319,7 @@ Docker-образ «всё-в-одном» для запуска ИИ-кодин
 |`FWD_CONTAINER_PORT`|Порт внутри контейнера для проброса наружу|
 |`FWD_HOST_PORT`|Предпочтительный порт на хосте; если занят — берётся случайный|
 |`ENABLE_DOCKER`|Проброс Docker-сокета внутрь контейнера (DooD). `true` по умолчанию|
+|`ENABLE_WORKTREE`|Монтировать `.git` основного репозитория, если проект — git worktree. `true` по умолчанию|
 
 ### Переменные `.agents.env` (в корне проекта)
 
@@ -317,6 +329,7 @@ Docker-образ «всё-в-одном» для запуска ИИ-кодин
 |`FWD_CONTAINER_PORT`|Порт внутри контейнера для проброса наружу (переопределяет `.env`)|
 |`FWD_HOST_PORT`|Предпочитаемый порт на хосте (переопределяет `.env`)|
 |`ENABLE_DOCKER`|Проброс Docker-сокета (переопределяет `.env`). `true` по умолчанию|
+|`ENABLE_WORKTREE`|Монтировать `.git` основного репозитория для git worktree (переопределяет `.env`). `true` по умолчанию|
 |`DOCKER_NETWORK`|Сеть Docker, к которой подключить контейнер. Если не указана — используется сеть по умолчанию (bridge)|
 |`EXEC_BEFORE`|Команда, выполняемая на хосте перед запуском контейнера|
 |`EXEC_AFTER`|Команда, выполняемая на хосте после остановки контейнера|
@@ -325,9 +338,10 @@ Docker-образ «всё-в-одном» для запуска ИИ-кодин
 ## Использование
 
 ```
-agent.sh <workdir> <exec>
+agent.sh [options] <workdir> <exec>
 ```
 
+`options` - ключи, которые должны идти до `workdir`: `--worktree` / `--no-worktree`, `--docker` / `--no-docker`. Переопределяют `ENABLE_WORKTREE` / `ENABLE_DOCKER` из `.env` и `.agents.env` \
 `workdir` - рабочая директория. По-умолчанию текущая, из которой был вызван скрипт \
 `exec` - команда, которая будет вызвана в контейнере. По-умолчанию `bash`
 
@@ -356,7 +370,15 @@ agent() {
 ### Docker-outside-of-Docker (DooD)
 Внутри контейнера доступны команды `docker` и `docker compose` — они работают с Docker daemon хоста через проброс Unix-сокета `/var/run/docker.sock`.
 
-Работает на macOS (Docker Desktop), Linux и WSL без дополнительной настройки — если сокет существует на хосте, он пробрасывается автоматически. Для отключения установите `ENABLE_DOCKER=false` в `.env` или `.agents.env`.
+Работает на macOS (Docker Desktop), Linux и WSL без дополнительной настройки — если сокет существует на хосте, он пробрасывается автоматически. Для отключения установите `ENABLE_DOCKER=false` в `.env` или `.agents.env` либо передайте `--no-docker`.
+
+### Git worktree
+
+Если директория проекта — linked git worktree (`.git` — файл, указывающий на `<main>/.git/worktrees/<name>`), то `.git` основного репозитория монтируется в контейнер по тому же абсолютному пути, что и на хосте: git связывает worktree с основным репо абсолютными путями, и без этого в контейнере не работает даже `git status`. При старте выводится `🌿 Git worktree: main repo mounted (...)`.
+
+Для отключения установите `ENABLE_WORKTREE=false` в `.env` или `.agents.env` либо передайте `--no-worktree`. Ключ удобен именно для worktree: `.agents.env` обычно не коммитится, и в каждом новом worktree его нет. Относительные пути в `gitdir` (`worktree.useRelativePaths`) не поддерживаются — выводится предупреждение и ничего не монтируется.
+
+Для `agentx.sh` монтирование фиксируется при создании контейнера — ключи при переподключении игнорируются (с предупреждением).
 
 ### Пользовательские данные
 Все пользовательские данные из `/~` сохраняются между сессиями в отдельном томе.
@@ -571,6 +593,7 @@ MCP в `.mcp.json` подключается как
 | `FWD_CONTAINER_PORT` | 容器内要向外转发的端口 |
 | `FWD_HOST_PORT` | 首选宿主机端口；如被占用则使用随机端口 |
 | `ENABLE_DOCKER` | 将 Docker 套接字转发到容器内（DooD）。默认为 `true` |
+| `ENABLE_WORKTREE` | 当项目是 git worktree 时挂载主仓库的 `.git`。默认为 `true` |
 
 ### `.agents.env` 变量（项目根目录）
 
@@ -580,6 +603,7 @@ MCP в `.mcp.json` подключается как
 | `FWD_CONTAINER_PORT` | 容器内要向外转发的端口（覆盖 `.env`） |
 | `FWD_HOST_PORT` | 首选宿主机端口（覆盖 `.env`） |
 | `ENABLE_DOCKER` | 转发 Docker 套接字（覆盖 `.env`）。默认为 `true` |
+| `ENABLE_WORKTREE` | 为 git worktree 挂载主仓库的 `.git`（覆盖 `.env`）。默认为 `true` |
 | `DOCKER_NETWORK` | 要将容器连接到的 Docker 网络。如果未设置，则使用默认的 bridge 网络 |
 | `EXEC_BEFORE` | 启动容器前在宿主机上执行的命令 |
 | `EXEC_AFTER` | 停止容器后在宿主机上执行的命令 |
@@ -588,9 +612,10 @@ MCP в `.mcp.json` подключается как
 ## 使用方法
 
 ```
-agent.sh <workdir> <exec>
+agent.sh [options] <workdir> <exec>
 ```
 
+`options` — 必须位于 `workdir` 之前的选项：`--worktree` / `--no-worktree`、`--docker` / `--no-docker`。它们覆盖 `.env` 和 `.agents.env` 中的 `ENABLE_WORKTREE` / `ENABLE_DOCKER` \
 `workdir` — 工作目录。默认为调用脚本的当前目录 \
 `exec` — 在容器内执行的命令。默认为 `bash`
 
@@ -622,7 +647,15 @@ agent() {
 
 容器内可以使用 `docker` 和 `docker compose` 命令——它们通过转发的 Unix 套接字 `/var/run/docker.sock` 与宿主机的 Docker 守护进程通信。
 
-在 macOS（Docker Desktop）、Linux 和 WSL 上无需额外配置即可使用——如果宿主机上存在套接字，将自动转发。要禁用，请在 `.env` 或 `.agents.env` 中设置 `ENABLE_DOCKER=false`。
+在 macOS（Docker Desktop）、Linux 和 WSL 上无需额外配置即可使用——如果宿主机上存在套接字，将自动转发。要禁用，请在 `.env` 或 `.agents.env` 中设置 `ENABLE_DOCKER=false`，或传入 `--no-docker`。
+
+### Git worktree
+
+如果项目目录是 linked git worktree（`.git` 是指向 `<main>/.git/worktrees/<name>` 的文件），主仓库的 `.git` 会以与宿主机相同的绝对路径挂载到容器中——git 通过绝对路径关联 worktree 与主仓库，否则容器内连 `git status` 都无法工作。启动时会显示 `🌿 Git worktree: main repo mounted (...)`。
+
+要禁用，请在 `.env` 或 `.agents.env` 中设置 `ENABLE_WORKTREE=false`，或传入 `--no-worktree`。命令行选项对 worktree 尤其方便：`.agents.env` 通常不提交，因此每个新 worktree 中都没有它。不支持相对 `gitdir` 路径（`worktree.useRelativePaths`）——会打印警告且不挂载任何内容。
+
+对于 `agentx.sh`，挂载在创建容器时固定——重新连接时传入的选项会被忽略（并显示警告）。
 
 ### 用户数据
 
