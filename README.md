@@ -100,7 +100,15 @@ Works on macOS (Docker Desktop), Linux, and WSL without additional configuration
 
 ### Git worktree
 
-If the project directory is a linked git worktree (`.git` is a file pointing to `<main>/.git/worktrees/<name>`), the main repository's `.git` is mounted into the container at the same absolute path as on the host — git resolves worktrees via absolute paths, so without this even `git status` fails inside the container. The startup log shows `🌿 Git worktree: main repo mounted (...)`.
+If the project directory is a linked git worktree (`.git` is a file pointing to `<main>/.git/worktrees/<name>`), the main repository's `.git` is mounted into the container at the same absolute path as on the host — git resolves worktrees via absolute paths, so without this even `git status` fails inside the container. The startup log shows `🌿 Git worktree (.): main repo mounted (...)`.
+
+If the project consists of several directories that are each a worktree (possibly of different repositories), list them in a `.worktrees` file in the project root — one path per line, relative to the directory of `.worktrees`; empty lines and `#` comments are ignored. The main repo of each one is detected from its `.git` file and mounted once, even if several worktrees share it:
+
+```
+# .worktrees
+backend
+frontend
+```
 
 To disable, set `ENABLE_WORKTREE=false` in `.env` or `.agents.env`, or pass `--no-worktree`. The CLI flag is handy for worktrees since `.agents.env` is usually not committed and thus missing in every new worktree. Relative `gitdir` paths (`worktree.useRelativePaths`) are not supported — a warning is printed and nothing is mounted.
 
@@ -374,7 +382,15 @@ agent() {
 
 ### Git worktree
 
-Если директория проекта — linked git worktree (`.git` — файл, указывающий на `<main>/.git/worktrees/<name>`), то `.git` основного репозитория монтируется в контейнер по тому же абсолютному пути, что и на хосте: git связывает worktree с основным репо абсолютными путями, и без этого в контейнере не работает даже `git status`. При старте выводится `🌿 Git worktree: main repo mounted (...)`.
+Если директория проекта — linked git worktree (`.git` — файл, указывающий на `<main>/.git/worktrees/<name>`), то `.git` основного репозитория монтируется в контейнер по тому же абсолютному пути, что и на хосте: git связывает worktree с основным репо абсолютными путями, и без этого в контейнере не работает даже `git status`. При старте выводится `🌿 Git worktree (.): main repo mounted (...)`.
+
+Если проект состоит из нескольких директорий, каждая из которых — свой worktree (в том числе разных репозиториев), перечислите их в файле `.worktrees` в корне проекта — по одному пути на строку, относительно директории с `.worktrees`; пустые строки и комментарии `#` игнорируются. Основной репозиторий каждого определяется по его файлу `.git` и монтируется один раз, даже если его используют несколько worktree:
+
+```
+# .worktrees
+backend
+frontend
+```
 
 Для отключения установите `ENABLE_WORKTREE=false` в `.env` или `.agents.env` либо передайте `--no-worktree`. Ключ удобен именно для worktree: `.agents.env` обычно не коммитится, и в каждом новом worktree его нет. Относительные пути в `gitdir` (`worktree.useRelativePaths`) не поддерживаются — выводится предупреждение и ничего не монтируется.
 
@@ -651,7 +667,15 @@ agent() {
 
 ### Git worktree
 
-如果项目目录是 linked git worktree（`.git` 是指向 `<main>/.git/worktrees/<name>` 的文件），主仓库的 `.git` 会以与宿主机相同的绝对路径挂载到容器中——git 通过绝对路径关联 worktree 与主仓库，否则容器内连 `git status` 都无法工作。启动时会显示 `🌿 Git worktree: main repo mounted (...)`。
+如果项目目录是 linked git worktree（`.git` 是指向 `<main>/.git/worktrees/<name>` 的文件），主仓库的 `.git` 会以与宿主机相同的绝对路径挂载到容器中——git 通过绝对路径关联 worktree 与主仓库，否则容器内连 `git status` 都无法工作。启动时会显示 `🌿 Git worktree (.): main repo mounted (...)`。
+
+如果项目由多个目录组成，且每个目录都是一个 worktree（可以来自不同仓库），请在项目根目录的 `.worktrees` 文件中列出它们——每行一个路径，相对于 `.worktrees` 所在目录；空行和 `#` 注释会被忽略。每个 worktree 的主仓库通过其 `.git` 文件自动识别，即使被多个 worktree 共用也只挂载一次：
+
+```
+# .worktrees
+backend
+frontend
+```
 
 要禁用，请在 `.env` 或 `.agents.env` 中设置 `ENABLE_WORKTREE=false`，或传入 `--no-worktree`。命令行选项对 worktree 尤其方便：`.agents.env` 通常不提交，因此每个新 worktree 中都没有它。不支持相对 `gitdir` 路径（`worktree.useRelativePaths`）——会打印警告且不挂载任何内容。
 

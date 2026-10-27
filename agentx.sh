@@ -223,19 +223,38 @@ if [ -z "$ENABLE_WORKTREE" ] && [ -f "$SCRIPT_DIR/.env" ]; then
     ENABLE_WORKTREE=$(_get_env_from "ENABLE_WORKTREE" "$SCRIPT_DIR/.env")
 fi
 [ -n "$CLI_WORKTREE" ] && ENABLE_WORKTREE="$CLI_WORKTREE"
-if [[ "${ENABLE_WORKTREE:-true}" != "false" ]] && [ -f "$HOST_DIR/.git" ]; then
-    _GITDIR=$(sed -n 's/^gitdir: //p' "$HOST_DIR/.git" | head -n1)
-    if [[ "$_GITDIR" != /* ]]; then
-        echo "⚠️  Git worktree uses a relative gitdir ($_GITDIR); main repo not mounted" >&2
-    elif [[ "$_GITDIR" == */worktrees/* ]]; then
-        GIT_COMMON_DIR="${_GITDIR%/worktrees/*}"
-        if [ -d "$GIT_COMMON_DIR/objects" ]; then
-            WORKTREE_ARGS+=("-v" "$GIT_COMMON_DIR:$GIT_COMMON_DIR:rw")
-            echo "🌿 Git worktree: main repo mounted ($GIT_COMMON_DIR)" >&2
-        else
-            echo "⚠️  Git worktree: main repo not found at $GIT_COMMON_DIR" >&2
-        fi
+if [[ "${ENABLE_WORKTREE:-true}" != "false" ]]; then
+    # Project root plus subdirs listed in .worktrees (one path per line, relative to the directory of .worktrees)
+    _WT_DIRS=(".")
+    if [ -f "$HOST_DIR/.worktrees" ]; then
+        while IFS= read -r _line || [ -n "$_line" ]; do
+            _line="${_line%$'\r'}"
+            [[ -z "${_line//[[:space:]]/}" || "$_line" == \#* ]] && continue
+            _WT_DIRS+=("$_line")
+        done < "$HOST_DIR/.worktrees"
     fi
+    _WT_SEEN=":"
+    for _wt in "${_WT_DIRS[@]}"; do
+        if [ ! -f "$HOST_DIR/$_wt/.git" ]; then
+            [ "$_wt" != "." ] && echo "⚠️  Git worktree: $_wt is not a linked worktree (no .git file)" >&2
+            continue
+        fi
+        _GITDIR=$(sed -n 's/^gitdir: //p' "$HOST_DIR/$_wt/.git" | head -n1)
+        if [[ "$_GITDIR" != /* ]]; then
+            echo "⚠️  Git worktree $_wt uses a relative gitdir ($_GITDIR); main repo not mounted" >&2
+        elif [[ "$_GITDIR" == */worktrees/* ]]; then
+            GIT_COMMON_DIR="${_GITDIR%/worktrees/*}"
+            # Several worktrees may share one main repo — mount it once
+            case "$_WT_SEEN" in *":$GIT_COMMON_DIR:"*) continue ;; esac
+            _WT_SEEN+="$GIT_COMMON_DIR:"
+            if [ -d "$GIT_COMMON_DIR/objects" ]; then
+                WORKTREE_ARGS+=("-v" "$GIT_COMMON_DIR:$GIT_COMMON_DIR:rw")
+                echo "🌿 Git worktree ($_wt): main repo mounted ($GIT_COMMON_DIR)" >&2
+            else
+                echo "⚠️  Git worktree ($_wt): main repo not found at $GIT_COMMON_DIR" >&2
+            fi
+        fi
+    done
 fi
 
 # 🔗 Selective mounts
